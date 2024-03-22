@@ -1,0 +1,15 @@
+project_name: micro-exporter
+
+builds:
+  - env:
+      - "CGO_ENABLED=0"
+      - "GO111MODULE=on"
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+source:
+  enabled: true
