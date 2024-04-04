@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/CoverWhale/logr"
 	"github.com/CoverWhale/micro-exporter/exporter"
+	"github.com/nats-io/jsm.go/natscontext"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -31,7 +33,8 @@ func Execute() {
 
 func init() {
 	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.micro-exporter.yaml)")
-
+	rootCmd.Flags().String("name", "micro-exporter", "connection name")
+	viper.BindPFlag("name", rootCmd.Flags().Lookup("name"))
 	rootCmd.Flags().Int("port", 8080, "exporter port")
 	viper.BindPFlag("port", rootCmd.Flags().Lookup("port"))
 	rootCmd.Flags().StringP("server", "s", "nats://localhost:4222", "NATS URLs")
@@ -48,7 +51,7 @@ func init() {
 
 func start(cmd *cobra.Command, args []string) error {
 
-	nc, err := nats.Connect(viper.GetString("server"), nats.UserCredentials(viper.GetString("creds")))
+	nc, err := newNatsConnection(viper.GetString("name"))
 	if err != nil {
 		return err
 	}
@@ -68,7 +71,25 @@ func start(cmd *cobra.Command, args []string) error {
 	})
 
 	port := fmt.Sprintf(":%d", viper.GetInt("port"))
-	fmt.Println("starting webserver")
+	logr.Infof("starting server: %s", port)
 	return http.ListenAndServe(port, nil)
 
+}
+
+func newNatsConnection(name string) (*nats.Conn, error) {
+	opts := []nats.Option{nats.Name(name)}
+
+	if viper.GetString("credentials_file") == "" && viper.GetString("nats_jwt") == "" {
+		logr.Debug("using NATS context")
+		return natscontext.Connect("", opts...)
+	}
+
+	if viper.GetString("nats_jwt") != "" && viper.GetString("nats_seed") != "" {
+		opts = append(opts, nats.UserJWTAndSeed(viper.GetString("nats_jwt"), viper.GetString("nats_seed")))
+	}
+	if viper.GetString("credentials_file") != "" {
+		opts = append(opts, nats.UserCredentials(viper.GetString("credentials_file")))
+	}
+
+	return nats.Connect(viper.GetString("nats_urls"), opts...)
 }

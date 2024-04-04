@@ -1,12 +1,26 @@
+// Copyright 2024 Cover Whale Insurance Solutions Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License
+
 package exporter
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/CoverWhale/logr"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/micro"
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,14 +73,14 @@ func (e *Exporter) WatchForServices(interval int) {
 			var info micro.Info
 
 			if err := json.Unmarshal(m.Data, &info); err != nil {
-				log.Println(err)
+				logr.Error(err)
 				return
 			}
 
 			e.services[info.ID] = info
 		})
 		if err != nil {
-			log.Println(err)
+			logr.Error(err)
 			continue
 		}
 		defer sub.Unsubscribe()
@@ -75,7 +89,7 @@ func (e *Exporter) WatchForServices(interval int) {
 		msg := nats.NewMsg(subject)
 		msg.Reply = sub.Subject
 		if err := e.nc.PublishMsg(msg); err != nil {
-			log.Println(err)
+			logr.Error(err)
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
@@ -117,7 +131,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		subject := fmt.Sprintf("%s.%s.%s.%s", micro.APIPrefix, micro.StatsVerb, v.Name, v.ID)
 		resp, err := e.nc.Request(subject, nil, 1*time.Second)
 		if err != nil && err != nats.ErrNoResponders {
-			log.Println(err)
+			logr.Error(err)
 			continue
 		}
 
@@ -127,7 +141,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		}
 
 		if err := json.Unmarshal(resp.Data, &stats); err != nil {
-			log.Println(err)
+			logr.Error(err)
 			continue
 		}
 
