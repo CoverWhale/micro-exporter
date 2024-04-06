@@ -17,4 +17,4 @@ Prometheus exporter to scrape NATS micro stats
 
 > will try to use NATS context if no auth is passed
 
-![metrics](mics/metrics.png)
+![metrics](misc/metrics.png)
