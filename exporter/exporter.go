@@ -54,49 +54,58 @@ func New(conn *nats.Conn) *Exporter {
 	return &Exporter{
 		nc:       conn,
 		services: make(map[string]micro.Info),
-		metrics: []metricInfo{
-			newCounterMetric(totalRequests, "total_num_requests"),
-			newCounterMetric(totalErrors, "total_num_errors"),
-			newCounterMetric(totalProcessingTime, "in seconds"),
-			newCounterMetric(averageProcessingTime, "in_milliseconds"),
-		},
+		metrics:  setupDefaultMetrics(),
 	}
+}
+
+func setupDefaultMetrics() []metricInfo {
+	return []metricInfo{
+		newCounterMetric(totalRequests, "total_num_requests"),
+		newCounterMetric(totalErrors, "total_num_errors"),
+		newCounterMetric(totalProcessingTime, "in seconds"),
+		newCounterMetric(averageProcessingTime, "in_milliseconds"),
+	}
+
 }
 
 // WatchForServices requests service after the time interval and adds services to the map
 func (e *Exporter) WatchForServices(interval int) {
 	for {
-		var mu sync.Mutex
-		sub, err := e.nc.Subscribe(e.nc.NewRespInbox(), func(m *nats.Msg) {
-			mu.Lock()
-			defer mu.Unlock()
-			var info micro.Info
-
-			if !json.Valid(m.Data) {
-				return
-			}
-
-			if err := json.Unmarshal(m.Data, &info); err != nil {
-				logr.Error(err)
-				return
-			}
-
-			e.services[info.ID] = info
-		})
-		if err != nil {
-			logr.Error(err)
-			continue
-		}
-		defer sub.Unsubscribe()
-
-		subject := fmt.Sprintf("%s.%s", micro.APIPrefix, micro.InfoVerb)
-		msg := nats.NewMsg(subject)
-		msg.Reply = sub.Subject
-		if err := e.nc.PublishMsg(msg); err != nil {
-			logr.Error(err)
-		}
-		time.Sleep(time.Duration(interval) * time.Second)
+		e.scrapeServices(interval)
 	}
+}
+
+func (e *Exporter) scrapeServices(interval int) {
+	var mu sync.Mutex
+	sub, err := e.nc.Subscribe(e.nc.NewRespInbox(), func(m *nats.Msg) {
+		mu.Lock()
+		defer mu.Unlock()
+		var info micro.Info
+
+		if !json.Valid(m.Data) {
+			return
+		}
+
+		if err := json.Unmarshal(m.Data, &info); err != nil {
+			logr.Error(err)
+			return
+		}
+
+		e.services[info.ID] = info
+	})
+	if err != nil {
+		logr.Error(err)
+		return
+	}
+	defer sub.Unsubscribe()
+
+	subject := fmt.Sprintf("%s.%s", micro.APIPrefix, micro.InfoVerb)
+	msg := nats.NewMsg(subject)
+	msg.Reply = sub.Subject
+	if err := e.nc.PublishMsg(msg); err != nil {
+		logr.Error(err)
+	}
+	time.Sleep(time.Duration(interval) * time.Second)
 }
 
 // newCounterMetric creates a new metricInfo
