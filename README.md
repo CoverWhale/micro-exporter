@@ -16,3 +16,5 @@ Prometheus exporter to scrape NATS micro stats
 | scrape-interval | scrape interval (seconds) | 15                    |
 
 > will try to use NATS context if no auth is passed
+
+![metrics](mics/metrics.png)
