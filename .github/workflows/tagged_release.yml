@@ -1,8 +1,8 @@
-name: release 
+name: tagged release
 on:
   push:
-    branches:
-      - main
+    tags:
+      - '*'
 env:
   DOCKER_REPO: ghcr.io/CoverWhale/micro-exporter
   REGISTRY: ghcr.io
@@ -17,17 +17,25 @@ jobs:
       id-token: write
       contents: write
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2 
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Log into registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: push images
+      - name: Build with version and latest and push 
         run: |
-          docker build -t $DOCKER_REPO:${{github.sha}} -t $DOCKER_REPO:latest .
+          docker build -t $DOCKER_REPO:${{ github.ref_name }} -t $DOCKER_REPO:latest . 
           docker push -a $DOCKER_REPO
