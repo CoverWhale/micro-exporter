@@ -4,7 +4,7 @@ on:
     tags:
       - '*'
 env:
-  DOCKER_REPO: ghcr.io/CoverWhale/micro-exporter
+  DOCKER_REPO: ghcr.io/coverwhale/micro-exporter
   REGISTRY: ghcr.io
 permissions:
   id-token: write
