@@ -9,11 +9,14 @@ permissions:
   id-token: write
   contents: read
 jobs:
+  test:
+    uses: ./.github/workflows/test.yaml
   release:
     permissions:
       id-token: write
       contents: write
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v2 
