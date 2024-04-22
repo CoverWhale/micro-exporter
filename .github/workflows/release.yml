@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - '*'
+env:
+  DOCKER_REPO: ghcr.io/CoverWhale/micro-exporter
 permissions:
   id-token: write
   contents: read
@@ -14,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v2 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
@@ -23,3 +25,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build with version and latest and push 
+        run: |
+          docker build -t $DOCKER_REPO:${{ github.ref_name }} -t $DOCKER_REPO:latest . 
+          docker push -a $DOCKER_REPO
