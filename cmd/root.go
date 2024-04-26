@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/CoverWhale/logr"
 	"github.com/CoverWhale/micro-exporter/exporter"
@@ -36,6 +37,8 @@ var rootCmd = &cobra.Command{
 	RunE:  start,
 }
 
+var replacer = strings.NewReplacer("-", "_")
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -46,21 +49,27 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
 	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.micro-exporter.yaml)")
 	rootCmd.Flags().String("name", "micro-exporter", "connection name")
 	viper.BindPFlag("name", rootCmd.Flags().Lookup("name"))
 	rootCmd.Flags().Int("port", 10015, "exporter port")
 	viper.BindPFlag("port", rootCmd.Flags().Lookup("port"))
 	rootCmd.Flags().StringP("server", "s", "nats://localhost:4222", "NATS URLs")
-	viper.BindPFlag("server", rootCmd.Flags().Lookup("server"))
+	viper.BindPFlag("nats_urls", rootCmd.Flags().Lookup("server"))
 	rootCmd.Flags().String("creds", "", "User credentials")
-	viper.BindPFlag("creds", rootCmd.Flags().Lookup("creds"))
+	viper.BindPFlag("credentials_file", rootCmd.Flags().Lookup("creds"))
 	rootCmd.Flags().String("jwt", "", "User JWT")
-	viper.BindPFlag("jwt", rootCmd.Flags().Lookup("jwt"))
+	viper.BindPFlag("nats_jwt", rootCmd.Flags().Lookup("jwt"))
 	rootCmd.Flags().String("seed", "", "User seed")
-	viper.BindPFlag("seed", rootCmd.Flags().Lookup("seed"))
+	viper.BindPFlag("nats_seed", rootCmd.Flags().Lookup("seed"))
 	rootCmd.Flags().Int("scrape-interval", 15, "Scrape interval to look up new services in seconds")
 	viper.BindPFlag("scrape_interval", rootCmd.Flags().Lookup("scrape-interval"))
+}
+
+func initConfig() {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(replacer)
 }
 
 func start(cmd *cobra.Command, args []string) error {
