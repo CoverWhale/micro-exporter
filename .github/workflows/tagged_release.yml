@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   test:
-    uses: ./.github/workflows/test.yaml
+    uses: ./.github/workflows/test.yml
   release:
     permissions:
       id-token: write
