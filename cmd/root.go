@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/CoverWhale/logr"
 	"github.com/CoverWhale/micro-exporter/exporter"
@@ -36,6 +37,8 @@ var rootCmd = &cobra.Command{
 	RunE:  start,
 }
 
+var replacer = strings.NewReplacer("-", "_")
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -46,6 +49,7 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
 	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.micro-exporter.yaml)")
 	rootCmd.Flags().String("name", "micro-exporter", "connection name")
 	viper.BindPFlag("name", rootCmd.Flags().Lookup("name"))
@@ -61,6 +65,11 @@ func init() {
 	viper.BindPFlag("nats_seed", rootCmd.Flags().Lookup("seed"))
 	rootCmd.Flags().Int("scrape-interval", 15, "Scrape interval to look up new services in seconds")
 	viper.BindPFlag("scrape_interval", rootCmd.Flags().Lookup("scrape-interval"))
+}
+
+func initConfig() {
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(replacer)
 }
 
 func start(cmd *cobra.Command, args []string) error {
