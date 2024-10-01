@@ -174,7 +174,7 @@ func (e *Exporter) scrapeService(wg *sync.WaitGroup, service micro.Info, ch chan
 
 func (e *Exporter) scrapeStats(wg *sync.WaitGroup, stats micro.Stats, endpoint *micro.EndpointStats, ch chan<- prometheus.Metric) {
 	defer wg.Done()
-	labels := fmt.Sprintf("%s_%s_%s", stats.Name, stats.ID, endpoint.Name)
+	labels := fmt.Sprintf("%s_%s_%s_%s", stats.Name, stats.ID, endpoint.Name, endpoint.Subject)
 	for _, metric := range e.metrics {
 		switch metric.valueType {
 		case totalRequests:
