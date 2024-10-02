@@ -114,7 +114,7 @@ func newCounterMetric(name metricName, help string) metricInfo {
 		desc: prometheus.NewDesc(
 			prometheus.BuildFQName("micro_stats", "stats", string(name)),
 			help,
-			[]string{"stats"},
+			[]string{"service", "instance_id", "name", "subject"},
 			nil,
 		),
 		promType:  prometheus.CounterValue,
@@ -174,17 +174,17 @@ func (e *Exporter) scrapeService(wg *sync.WaitGroup, service micro.Info, ch chan
 
 func (e *Exporter) scrapeStats(wg *sync.WaitGroup, stats micro.Stats, endpoint *micro.EndpointStats, ch chan<- prometheus.Metric) {
 	defer wg.Done()
-	labels := fmt.Sprintf("%s_%s_%s_%s", stats.Name, stats.ID, endpoint.Name, endpoint.Subject)
+	labels := []string{stats.Name, stats.ID, endpoint.Name, endpoint.Subject}
 	for _, metric := range e.metrics {
 		switch metric.valueType {
 		case totalRequests:
-			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.NumRequests), labels)
+			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.NumRequests), labels...)
 		case totalErrors:
-			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.NumErrors), labels)
+			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.NumErrors), labels...)
 		case totalProcessingTime:
-			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.ProcessingTime.Seconds()), labels)
+			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.ProcessingTime.Seconds()), labels...)
 		case averageProcessingTime:
-			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.AverageProcessingTime.Milliseconds()), labels)
+			ch <- prometheus.MustNewConstMetric(metric.desc, prometheus.CounterValue, float64(endpoint.AverageProcessingTime.Milliseconds()), labels...)
 
 		}
 	}
