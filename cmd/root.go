@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 
@@ -84,6 +85,7 @@ func start(cmd *cobra.Command, args []string) error {
 	go ex.WatchForServices(viper.GetInt("scrape_interval"))
 
 	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("GET /healthz", http.HandlerFunc(health(nc)))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		resp := fmt.Sprintf("<html>" +
 			"<head><title>Micro Stats Exporter</title></head>" +
@@ -93,10 +95,26 @@ func start(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(w, resp)
 	})
 
+	go func() {
+		for {
+			a := <-nc.StatusChanged(nats.CLOSED)
+			logr.Fatalf("NATS connection: %v", a)
+		}
+	}()
+
 	port := fmt.Sprintf(":%d", viper.GetInt("port"))
 	logr.Infof("starting server: %s", port)
 	return http.ListenAndServe(port, nil)
+}
 
+func health(nc *nats.Conn) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !nc.IsConnected() {
+			logr.Error("NATS is not connected")
+			http.Error(w, "internal server error", 500)
+			return
+		}
+	}
 }
 
 func newNatsConnection(name string) (*nats.Conn, error) {
